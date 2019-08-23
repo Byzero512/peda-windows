@@ -2,16 +2,20 @@ import gdb
 import struct
 import subprocess
 import sys
+import os
 import string
 import hashlib
-
+import pefile
 import var
+
 
 class info():
     @classmethod
     def reg(clx,reg_name):
         reg_value = gdb.selected_frame().read_register(reg_name)
-        return int(reg_value.cast(gdb.lookup_type('unsigned long')))
+        if proc.is_32():
+            return int(reg_value.cast(gdb.lookup_type('unsigned long')))
+        return long(reg_value)
     @classmethod
     def read(clx,addr,length):
         gdb_inferior = gdb.selected_inferior()
@@ -193,7 +197,17 @@ class proc():
     mapped_end=[]
     other_beg=[]
     other_end=[]
+
     maps_hash=None
+    maps=[]
+
+    simplify_vmmap=[]                # beg end protection details
+    last_details=None
+    last=[]                      
+
+    disable_pie_default=0
+    need_disable_pie=0
+
     @classmethod
     def is_alive(cls):
         """Check if GDB is running."""
@@ -219,6 +233,23 @@ class proc():
             fpath=fpath[fpath.find(' '):].lstrip(' ')
             var.proc_path.update({inf_id:fpath})
             return fpath
+
+    @classmethod
+    def proc_base(clx):
+        vmmap=clx.vmmap()
+        def ret_proc_base(vmmap):
+            if vmmap:
+                proc_path = clx.proc_path()
+                maps = vmmap.split('\n')
+                
+                for line in maps:
+                    if proc_path in line:
+                        index = line.find('-')
+                        proc_base = int(line[0:index],16)
+                        return proc_base
+            else:
+                return 0x400000
+        return ret_proc_base(vmmap)
 
     @classmethod
     def arch(clx):
@@ -249,6 +280,8 @@ class proc():
     @classmethod
     def vmmap(clx, show_level=0):
         vmmap_exec = 'vmmap.exe -pid {} '.format(clx.pid())
+        if proc.is_64():
+            vmmap_exec = 'vmmap64.exe -pid {} '.format(clx.pid())
         if show_level == 2:
             vmmap_exec += '-all'
         elif show_level == 1:
@@ -256,52 +289,66 @@ class proc():
         return subprocess.check_output(vmmap_exec, shell=True).strip('\n')
 
     @classmethod
-    def parse_vmmap(clx,addr=0):
-
+    def parse_vmmap(clx): #,addr=0):
         maps=clx.vmmap(2)
-        maps_hash=hashlib.md5(maps)
-        maps=maps.split('\n')
-        if maps_hash==clx.maps_hash and addr==0:
+        if len(maps)==0:
             return
-
-        clx.proc_beg = []
-        clx.proc_end = []
-        clx.dll_beg = []
-        clx.dll_end = []
-        clx.stack_beg = []
-        clx.stack_end = []
-        clx.heap_beg = []
-        clx.heap_end = []
-        clx.mapped_beg = []
-        clx.mapped_end = []
-        clx.other_beg = []
-        clx.other_end = []
-
+        maps_hash=hashlib.md5(maps)
+        maps=maps.split('\r\n')
+        if maps_hash==clx.maps_hash:
+            return
+        if maps_hash!=clx.maps_hash:
+            clx.proc_beg = []
+            clx.proc_end = []
+            clx.dll_beg = []
+            clx.dll_end = []
+            clx.stack_beg = []
+            clx.stack_end = []
+            clx.heap_beg = []
+            clx.heap_end = []
+            clx.mapped_beg = []
+            clx.mapped_end = []
+            clx.other_beg = []
+            clx.other_end = []
+            clx.maps=[]                  # all maps
+            clx.simplify_vmmap=[] # simplify maps
+            
+        # parse line return (beg,end,type,protection,details)
         def parse_line(line):
-            m=line.find('-')
-            r=line.find(' ')
-            return (int(line[0:m],16),int(line[m+1:r],16))
-        i=0
-        res=None
-        for line in maps:
-            (beg,end)=parse_line(line)
+            beg=int(line[0:0x10],16)
+            end=int(line[0x11:0x21],16)
+            typestr=line[35:line.find(' ',35)]
+            protect=line[0x30:0x37]
+            details=line[57:]
+            return ((beg,end,typestr,protect,details))
 
-            if addr and (beg<=addr<end):
-                res=i
-                if clx.maps_hash==maps_hash:
-                    break
-            i+=1
+        for line in maps:
+            (beg,end,typestr,protect,details)=parse_line(line.strip('\r\n'))
+
             if maps_hash!=clx.maps_hash:
-                if clx.proc_path() in line:
+
+                clx.maps.append((beg,end,typestr,protect,details))
+                def setSimplifyVmmp():
+
+                    if details!=clx.last_details or clx.last[1]!=beg:
+                        clx.last=[beg,end,typestr,details]
+                        clx.simplify_vmmap.append(clx.last)
+                        clx.last_details=details
+                    else:
+                        clx.last[1]+=end-beg
+                    # print(clx.simplify_vmmap)                         
+                setSimplifyVmmp()
+
+                if clx.proc_path() ==line[57:]:
                     clx.proc_beg.append(beg)
                     clx.proc_end.append(end)
-                elif 'dll' in line:
+                elif 'dll'==line[-3:]:
                     clx.dll_beg.append(beg)
                     clx.dll_end.append(end)
-                elif 'Heap' in line:
+                elif 'heap'==line[35:39]:
                     clx.heap_beg.append(beg)
                     clx.heap_end.append(end)
-                elif 'Stack' in line:
+                elif 'stack' == line[35:40]:
                     clx.stack_beg.append(beg)
                     clx.stack_end.append(end)
                 # elif '[mapped]' in line or '[' not in line:
@@ -310,24 +357,36 @@ class proc():
                 else:
                     clx.other_beg.append(beg)
                     clx.other_end.append(end)
-        # def show():
-        #     # print(proc.proc_path())
-        #     # print(clx.proc_beg)
-        #     # print(clx.proc_end)
-        #     # print(clx.dll_beg)
-        #     # print(clx.dll_end)
-        #     print(clx.stack_beg)
-        #     print(clx.stack_end)
-        #     # print(clx.heap_beg)
-        #     # print(clx.heap_end)
-        #     # print(clx.mapped_beg)
-        #     # print(clx.mapped_end)
-        #     # print(clx.other_beg)
-        #     # print(clx.other_end)
-        # show()
-        clx.maps_hash==maps_hash
-        return res
 
+        clx.maps_hash==maps_hash
+
+    @classmethod
+    def disable_pie(clx,args):
+        if clx.need_disable_pie:
+            if clx.disable_pie_default:
+                fpath=clx.proc_path()
+                pe_fp=pefile.PE(fpath)
+                pie_enabled=bool(pe_fp.OPTIONAL_HEADER.DllCharacteristics& pefile.DLL_CHARACTERISTICS["IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE"])
+                if pie_enabled:
+                    new_fpath=fpath.replace('.exe','_disable_pie.exe')
+                    if not os.path.exists(new_fpath): 
+                        pe_fp.OPTIONAL_HEADER.DllCharacteristics &= ~pefile.DLL_CHARACTERISTICS["IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE"]
+                        pe_fp.write(new_fpath)
+                    new_fpath=new_fpath.replace('\\','/')    
+                    command='exec-file {}'.format(new_fpath)
+                    gdb.execute(command,to_string=True)         # change the inferior
+                
+                pe_fp.close()
+            else:
+                fpath=clx.proc_path()
+                new_fpath=fpath.replace('_disable_pie.exe','.exe')
+                if ('_disable_pie.exe') in fpath and os.path.exists(new_fpath):
+                    command='exec-file {}'.format(new_fpath).replace('\\','/')  
+                    gdb.execute(command,to_string=True)
+            clx.disable_pie_default=1
+    @classmethod
+    def enable_pie(clx,args):
+        clx.disable_pie_default=0    
 
 class exec_cmd():
     @classmethod

@@ -1,5 +1,6 @@
 from lib import *
 import gdb
+
 REGISTERS = {
     'i386': ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "eip","eflags"],
     'i386:x86-64': [
@@ -35,16 +36,18 @@ class screen():
             l=warp.stack()
             for i in l:
                 print(i)
+        
         proc.parse_vmmap()
         reg()
         code()
         stack()
 
 class cmd():
+# context
     @classmethod
     def vmmap(clx,args=[]):
         n=0
-        if len(args)>1:
+        if args:
             if args[0]=='most':
                 n=1
             elif args[0]=='all':
@@ -80,8 +83,229 @@ class cmd():
         for i in l:
             print(i)
     @classmethod
+    def maps(clx,args=[]):
+
+        ll=['image']
+        ll+=args
+        show_all=0
+        if "all" in ll:
+            show_all=1
+
+        for l in proc.simplify_vmmap:
+            if not show_all and l[2] not in ll:
+                continue
+            addr="{} - {}".format(hex(l[0])[2:].rjust(16,'0'),hex(l[1])[2:].rjust(16,'0'))
+            typestr=('\t{}\t\t'.format(l[2])).ljust(9,' ')
+            detilas=l[3]
+            print(addr+typestr+detilas)
+        # print(payload)
+    @classmethod
+    def xinfo(clx,args):
+        addr=int(args[0],16)
+        for l in proc.maps:
+            if l[0]<=addr<l[1]:
+                beg=hex(l[0])
+                end=hex(l[1])
+                print(parse.color("xinfo:",'cyan'))
+                print('\t'+warp.xinfo_color(addr))
+                print(parse.color("details:",'cyan'))
+                print('\t{} - {}  {}  {}  {}'.format(beg,end,l[2],l[3],l[4]))
+                break
+
+# pc
+    @classmethod
     def rejmp(clx,args=None):
         warp.code(rejmp=1)
+
+# brk
+    @classmethod
+    def nb(clx,args):
+        proc_base=proc.proc_base()
+        for line in args:
+            try:
+                brk_cmd = 'b *{}'.format(hex(proc_base+info.calc(line)))
+                gdb.execute(brk_cmd)
+            except:
+                print('error when exec '+brk_cmd,'offset is: '+line)
+                pass
+
+# wch
+    @classmethod
+    def nx(clx,args):
+        proc_base = proc.proc_base()
+        # if not proc.is_pie():
+            # proc_base = 0
+        nfu=None
+        addr=None
+        bit_cmd='wx'
+        if proc.is_64():
+            bit_cmd='gx'
+        if len(args)>=2:
+            if '/' not in args[0]:
+                # nx offset length
+                nfu = '/'+length+bit_cmd
+                offset = info.calc(args[0])
+            else:
+                # nx/nfu offset
+                nfu = args[0]
+                offset = info.calc(args[1])
+        else:
+            # nx offset 20
+            nfu = '/20'+bit_cmd
+            offset = info.calc(args[0])
+        addr = hex(proc_base+offset)
+        exec_cmd.execute_exam(nfu,addr)
+    @classmethod
+    def nxc(clx,args):
+        """
+            nxc offset len, len default is 16
+        """
+        
+        if not proc.is_pie():
+            proc_base=0
+        nfu=None
+        
+        if len(args)>=2:
+            nfu = "/"+args[1]+'c'
+        else:
+            nfu='/16c'
+
+        offset = info.calc(args[0])
+        proc_base = proc.proc_base()
+        addr = hex(proc_base+offset)
+        exec_cmd.execute_exam(nfu,addr)
+    @classmethod
+    def nxs(clx,args):
+        """
+            nxs offset len, len default is 4
+        """
+
+        proc_base=proc.proc_base()
+        if not proc.is_pie():
+            proc_base=0
+        nfu=None
+        if len(args)>=2:
+            nfu='/'+args[1]+'s'
+        else:
+            nfu='/4s'
+        offset = info.calc(args[0])
+        addr = hex(proc_base+offset)
+        exec_cmd.execute_exam(nfu,addr)
+    @classmethod
+    def bp(clx,args):
+        nfu=None
+        bit_cmd='wx'
+        bp=info.reg('ebp')
+        if proc.is_64():
+            bit_cmd='gx'
+            bp=info.reg('rbp')
+        if len(args)>=2:
+            if '/' not in args[0]:                   # bp offset len
+                nfu = '/'+args[1]+bit_cmd
+                offset=info.calc(args[0])
+
+            else:                                   # bp/nfu offset
+                nfu = args[0]
+                offset=info.calc(args[1])
+        else:
+            nfu='/20'+bit_cmd
+            offset=info.calc(args[0])
+
+        addr = hex(bp-offset)
+        exec_cmd.execute_exam(nfu,addr)
+    @classmethod
+    def bpc(clx,args):
+        """
+            bpc offset len
+        """
+        nfu = None
+        bit_cmd = 'wx'
+        bp = info.reg('ebp')
+        if proc.is_64():
+            bit_cmd = 'gx'
+            bp = info.reg('rbp')
+
+        if len(args) >= 2:                                 # bpc offset len
+            nfu = '/'+args[1]+'c'
+        else:
+            nfu = '/16c'
+        offset = info.calc(args[0])
+        addr = bp-offset
+        exec_cmd.execute_exam(nfu, addr)    
+    @classmethod
+    def bps(clx,args):
+        """
+            bpc offset len
+        """
+        nfu = None
+        bit_cmd = 'wx'
+        bp = info.reg('ebp')
+        if proc.is_64():
+            bit_cmd = 'gx'
+            bp = info.reg('rbp')
+
+        if len(args)>=2:                                 # bpc offset len
+            nfu='/'+args[1]+'s'
+        else:
+            nfu='/4s'
+        offset = info.calc(args[0])
+        addr = bp-offset
+        exec_cmd.execute_exam(nfu,addr)
+    @classmethod
+    def sp(clx,args):
+        nfu = None
+        bit_cmd = 'wx'
+        sp = info.reg('esp')
+        if proc.is_64():
+            bit_cmd = 'gx'
+            sp = info.reg('rsp')
+        if len(args) >= 2:
+            if '/' not in args[0]:                   # bp offset len
+                nfu = '/'+args[1]+bit_cmd
+                offset = info.calc(args[0])
+
+            else:                                   # bp/nfu offset
+                nfu = args[0]
+                offset = info.calc(args[1])
+        else:
+            nfu = '/20'+bit_cmd
+            offset = info.calc(args[0])
+
+        addr = hex(sp+offset)
+        exec_cmd.execute_exam(nfu, addr)
+    @classmethod
+    def spc(clx,args):
+        nfu = None
+        bit_cmd = 'wx'
+        sp = info.reg('esp')
+        if proc.is_64():
+            bit_cmd = 'gx'
+            sp = info.reg('rsp')
+
+        if len(args) >= 2:                                 # bpc offset len
+            nfu = '/'+args[1]+'c'
+        else:
+            nfu = '/16c'
+        offset = info.calc(args[0])
+        addr = sp-offset
+        exec_cmd.execute_exam(nfu, addr)
+    @classmethod
+    def sps(clx,args):
+        nfu = None
+        bit_cmd = 'wx'
+        sp = info.reg('esp')
+        if proc.is_64():
+            bit_cmd = 'gx'
+            sp = info.reg('rsp')
+
+        if len(args) >= 2:                                 # bpc offset len
+            nfu = '/'+args[1]+'s'
+        else:
+            nfu = '/4s'
+        offset = info.calc(args[0])
+        addr = sp-offset
+        exec_cmd.execute_exam(nfu, addr)
+
 
 class warp():
     @classmethod
@@ -121,19 +345,20 @@ class warp():
     def reg(clx):
         res=[]
         for reg in REGISTERS[proc.arch()]:
-            show_payload=parse.color(reg,'cyan')+': '
+            show_payload=parse.color(reg.rjust(6,' '),'cyan')+': '
             show_payload+=clx.xinfo_color(info.reg(reg))
             res.append(show_payload)
         return res
 
     @classmethod
     def code(clx,addr=None,prev_count=5,next_count=5,rejmp=False):
+        
         if addr is None:
             ip='eip'
             if proc.is_64():
                 ip='rip'
             addr=info.reg(ip)            
-
+            
         def is_jump(addr=addr):
             opcode=info.opcode(addr)
             jump_opcode=['jmp','je','jne',
@@ -310,19 +535,22 @@ class warp():
                 try:
                     if proc.is_32():
                         sp=info.reg('esp')
-                        for i in range(3):
-                            
-                            addr=sp+4*i
-                            res.append('[arg{}]: '.format(i)+clx.xinfo_color(addr))
+                        r=[info.value(sp),info.value(sp+4),info.value(sp+0x8)]
+                        # for i in range(3):
+                            # addr=info.value(sp+4*i)
+                            # res.append('[arg{}]: '.format(i)+clx.xinfo_color(addr))
                     else:
-                        # not complete
-                        return []
+                        r=[info.reg('rcx'),info.reg('rdx'),info.reg('r8')]
+                    for i in range(3):
+                        res.append('[arg{}]: '.format(i)+clx.xinfo_color(r[i]))
                     return res
                 except:
                     return []
             return []
 
-        all_ins=prev_ins()+cur_ins()+next_ins()
+        all_ins=prev_ins()
+        all_ins+=[parse.color('------------------------------','cyan')]
+        all_ins+=cur_ins()+next_ins()
         taken_str=' '*32
         if is_jump():
             if is_jump_taken():
@@ -353,9 +581,22 @@ class warp():
 
 exec_cmd.execute('set prompt {}'.format(parse.color('wibe$ ','yellow')))
 
-wibe_cmd=[
-    'vmmap','pcon','pstack','pcode','preg','rejmp'
-]
-wibe_exec=[
-    cmd.vmmap,cmd.pcon,cmd.pstack,cmd.pcode,cmd.preg,cmd.rejmp
-]
+# wibe_cmd=[
+#     'vmmap','pcon','pstack','pcode','preg','rejmp','disable_pie','enable_pie'
+# ]
+# wibe_exec=[
+#     cmd.vmmap,cmd.pcon,cmd.pstack,cmd.pcode,cmd.preg,cmd.rejmp,proc.disable_pie,proc.enable_pie
+# ]
+
+clas=[cmd]
+def regCom():
+    cmd_str=[]
+    cmd_exec=[]
+    for c in clas:
+        for f in dir(c):
+            if not f.startswith('__'):
+                cmd_str.append(f)
+                cmd_exec.append(getattr(c,f))
+    cmd_str+=['disable_pie','enable_pie']
+    cmd_exec+=[proc.disable_pie,proc.enable_pie]
+    return (cmd_str,cmd_exec)
