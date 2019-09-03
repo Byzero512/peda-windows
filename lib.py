@@ -5,7 +5,7 @@ import sys
 import os
 import string
 import hashlib
-import pefile
+# import pefile
 import var
 
 
@@ -360,33 +360,33 @@ class proc():
 
         clx.maps_hash==maps_hash
 
-    @classmethod
-    def disable_pie(clx,args):
-        if clx.need_disable_pie:
-            if clx.disable_pie_default:
-                fpath=clx.proc_path()
-                pe_fp=pefile.PE(fpath)
-                pie_enabled=bool(pe_fp.OPTIONAL_HEADER.DllCharacteristics& pefile.DLL_CHARACTERISTICS["IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE"])
-                if pie_enabled:
-                    new_fpath=fpath.replace('.exe','_disable_pie.exe')
-                    if not os.path.exists(new_fpath): 
-                        pe_fp.OPTIONAL_HEADER.DllCharacteristics &= ~pefile.DLL_CHARACTERISTICS["IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE"]
-                        pe_fp.write(new_fpath)
-                    new_fpath=new_fpath.replace('\\','/')    
-                    command='exec-file {}'.format(new_fpath)
-                    gdb.execute(command,to_string=True)         # change the inferior
+    # @classmethod
+    # def disable_pie(clx,args):
+    #     if clx.need_disable_pie:
+    #         if clx.disable_pie_default:
+    #             fpath=clx.proc_path()
+    #             pe_fp=pefile.PE(fpath)
+    #             pie_enabled=bool(pe_fp.OPTIONAL_HEADER.DllCharacteristics& pefile.DLL_CHARACTERISTICS["IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE"])
+    #             if pie_enabled:
+    #                 new_fpath=fpath.replace('.exe','_disable_pie.exe')
+    #                 if not os.path.exists(new_fpath): 
+    #                     pe_fp.OPTIONAL_HEADER.DllCharacteristics &= ~pefile.DLL_CHARACTERISTICS["IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE"]
+    #                     pe_fp.write(new_fpath)
+    #                 new_fpath=new_fpath.replace('\\','/')    
+    #                 command='exec-file {}'.format(new_fpath)
+    #                 gdb.execute(command,to_string=True)         # change the inferior
                 
-                pe_fp.close()
-            else:
-                fpath=clx.proc_path()
-                new_fpath=fpath.replace('_disable_pie.exe','.exe')
-                if ('_disable_pie.exe') in fpath and os.path.exists(new_fpath):
-                    command='exec-file {}'.format(new_fpath).replace('\\','/')  
-                    gdb.execute(command,to_string=True)
-            clx.disable_pie_default=1
-    @classmethod
-    def enable_pie(clx,args):
-        clx.disable_pie_default=0    
+    #             pe_fp.close()
+    #         else:
+    #             fpath=clx.proc_path()
+    #             new_fpath=fpath.replace('_disable_pie.exe','.exe')
+    #             if ('_disable_pie.exe') in fpath and os.path.exists(new_fpath):
+    #                 command='exec-file {}'.format(new_fpath).replace('\\','/')  
+    #                 gdb.execute(command,to_string=True)
+    #         clx.disable_pie_default=1
+    # @classmethod
+    # def enable_pie(clx,args):
+    #     clx.disable_pie_default=0    
 
 class exec_cmd():
     @classmethod

@@ -2,10 +2,10 @@ import gdb
 import os
 import sys
 
-python_site_packages_path='F:\\Python27\\Lib\\site-packages'
+# python_site_packages_path='F:\\Python27\\Lib\\site-packages'
 cwd=os.path.dirname(__file__)
 sys.path.append(cwd)
-sys.path.append(python_site_packages_path)
+# sys.path.append(python_site_packages_path)
 
 
 from wibe import screen,regCom

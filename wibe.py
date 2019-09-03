@@ -597,6 +597,6 @@ def regCom():
             if not f.startswith('__'):
                 cmd_str.append(f)
                 cmd_exec.append(getattr(c,f))
-    cmd_str+=['disable_pie','enable_pie']
-    cmd_exec+=[proc.disable_pie,proc.enable_pie]
+    # cmd_str+=['disable_pie','enable_pie']
+    # cmd_exec+=[proc.disable_pie,proc.enable_pie]
     return (cmd_str,cmd_exec)
