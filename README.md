@@ -7,7 +7,7 @@ https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20
 
 ## install
 1. git clone https://github.com/Byzero512/wibe
-> add the absolute path of init.py into ~/.gdbinit
+2. add the absolute path of init.py into ~/.gdbinit
 
 
 ## photos
