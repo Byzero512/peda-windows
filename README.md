@@ -12,9 +12,9 @@ https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20
 ## command
 1. vmmap, maps
     + for vmmap command, you need https://github.com/Byzero512/vmmap-win-cmd
-2. xinfo
+2. xinfo address
 3. pcon, pstack, preg
-4. nb
+4. nb ins_address_offset_to_program_base
 
 
 ## photos
