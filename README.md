@@ -2,7 +2,7 @@
 
 ### deps
 1. mingw gdb
-  please install the mingw-gdb ref by the link bellow
++ please install the mingw-gdb ref by the link bellow
 https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20%28Win64%20hosted%29/gdb/
 
 ## install
