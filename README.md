@@ -8,4 +8,6 @@ https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20
 ## install
 > add the path to init.py to ~/.gdbinit
 
+
+## photos
 ![enter description here](./img/screen.png)
