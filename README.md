@@ -9,6 +9,13 @@ https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20
 1. git clone https://github.com/Byzero512/wibe
 2. add the absolute path of init.py into ~/.gdbinit
 
+## command
+1. vmmap, maps
+    + for vmmap command, you need https://github.com/Byzero512/vmmap-win-cmd
+2. xinfo
+3. pcon, pstack, preg
+4. nb
+
 
 ## photos
 ![enter description here](./img/screen.png)
