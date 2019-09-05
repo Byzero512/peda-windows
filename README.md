@@ -15,6 +15,7 @@ https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20
 2. xinfo address
 3. pcon, pstack, preg
 4. nb ins_address_offset_to_program_base
+3. sp, bp
 
 
 ## photos
