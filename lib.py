@@ -8,14 +8,12 @@ import hashlib
 # import pefile
 import var
 
-
 class info():
     @classmethod
     def reg(clx,reg_name):
         reg_value = gdb.selected_frame().read_register(reg_name)
-        if proc.is_32():
-            return int(reg_value.cast(gdb.lookup_type('unsigned long')))
-        return long(reg_value)
+        return struct.unpack("<Q",struct.pack("<q",reg_value.__long__()))[0]
+
     @classmethod
     def read(clx,addr,length):
         gdb_inferior = gdb.selected_inferior()
@@ -359,7 +357,7 @@ class proc():
                     clx.other_end.append(end)
 
         clx.maps_hash==maps_hash
-
+"""
     # @classmethod
     # def disable_pie(clx,args):
     #     if clx.need_disable_pie:
@@ -387,6 +385,7 @@ class proc():
     # @classmethod
     # def enable_pie(clx,args):
     #     clx.disable_pie_default=0    
+"""
 
 class exec_cmd():
     @classmethod
@@ -410,7 +409,10 @@ class parse():
             "cyan": 36,
             "white": 37,
         }
-        return "\033[0;{}m{}\033[0m".format(c.get(color), content)
+        if type(color)==str:
+            return "\033[0;{}m{}\033[0m".format(c.get(color), content)
+        else:
+            return "\033[0;{}m{}\033[0m".format(color, content)
     
     @classmethod
     def u(clx,content,length=None):
@@ -425,6 +427,7 @@ class parse():
             elif proc.is_32():
                 return struct.unpack('<I',content)[0]
         return None
+        
     @classmethod
     def p(clx,content,length=None):
         if length:

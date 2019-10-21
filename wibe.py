@@ -43,7 +43,7 @@ class screen():
         stack()
 
 class cmd():
-# context
+    # context
     @classmethod
     def vmmap(clx,args=[]):
         n=0
@@ -112,12 +112,12 @@ class cmd():
                 print('\t{} - {}  {}  {}  {}'.format(beg,end,l[2],l[3],l[4]))
                 break
 
-# pc
+    # pc
     @classmethod
     def rejmp(clx,args=None):
         warp.code(rejmp=1)
 
-# brk
+    # brk
     @classmethod
     def nb(clx,args):
         proc_base=proc.proc_base()
@@ -129,7 +129,7 @@ class cmd():
                 print('error when exec '+brk_cmd,'offset is: '+line)
                 pass
 
-# wch
+    # wch
     @classmethod
     def nx(clx,args):
         proc_base = proc.proc_base()
@@ -305,7 +305,62 @@ class cmd():
         offset = info.calc(args[0])
         addr = sp-offset
         exec_cmd.execute_exam(nfu, addr)
-
+    @classmethod
+    def z(clx,args):
+        cap=4
+        if proc.is_64():
+            cap=8
+        n=20
+        addr=info.calc(args[0])
+        if len(args)==2:
+            n=info.calc(args[1])
+        if n%2==1:
+            n+=1
+        mem=info.read(addr,n*cap)
+        need_color_addr=[]
+        color=[]
+        all_con=[]
+        x=0
+        for i in range(int(len(mem)/(cap*2))):
+            lddr=addr+i*cap*2
+            lnum=parse.u(mem[i*cap*2:i*cap*2+cap])
+            rnum=parse.u(mem[i*cap*2+cap:i*cap*2+cap*2])
+            all_con+=[lddr,lnum,rnum]
+            for a in [lnum,rnum]:
+                if addr<=a<(addr+n*cap) and a not in color:
+                    need_color_addr.append(a)
+                    color.append(31+x%6)
+                    x+=1
+        payload=''
+        for i in range(int(len(all_con)/3)):
+            if all_con[3*i] in need_color_addr:
+                payload+=parse.color(
+                    hex(all_con[3*i]).strip('L'),
+                    color[need_color_addr.index(all_con[3*i])]
+                )+'\t'
+            else:
+                payload+=hex(all_con[3*i]).strip('L')+'\t'
+            for j in all_con[3*i+1:3*i+3]:
+                if j in need_color_addr:
+                    payload+=parse.color(
+                        '0x'+hex(j)[2:].rjust(cap*2,'0').strip('L'),
+                        color[need_color_addr.index(j)]
+                    )+'\t'
+                elif j==0:
+                    payload+='-'*(cap*2+2)+'\t'
+                elif j==parse.u('\xff'*cap):
+                    payload+='*'*(cap*2+2)+'\t'
+                else:
+                    payload+='0x'+hex(j)[2:].strip('L').rjust(cap*2,'0')+'\t'
+            payload+='\n'
+        print(payload.strip('\n'))
+    @classmethod 
+    def parse(clx,args):
+        heapbase=info.calc(args[0])
+        print("CompatibilityFlags: 0x{:X}".format(parse.u(info.read(heapbase+0x78,4),4)))
+        FrontEndHeap=parse.u(info.read(heapbase+0x198,8),8)
+        print('FrontEndHeap: 0x{:X}'.format(FrontEndHeap))
+        print('SegmentInfoArrays addr: 0x{:X}'.format(FrontEndHeap+0x4a8))
 
 class warp():
     @classmethod
