@@ -12,8 +12,10 @@ class info():
     @classmethod
     def reg(clx,reg_name):
         reg_value = gdb.selected_frame().read_register(reg_name)
-        return struct.unpack("<Q",struct.pack("<q",reg_value.__long__()))[0]
-
+        if proc.is_64():
+            return struct.unpack("<Q",struct.pack("<q",reg_value.__long__()))[0]
+        else:
+            return struct.unpack("<I",struct.pack("<i",reg_value.__long__()))[0]
     @classmethod
     def read(clx,addr,length):
         gdb_inferior = gdb.selected_inferior()
@@ -58,7 +60,7 @@ class info():
                 r_posi = symbol_posi[i+1]
             else:
                 r_posi = len(expr)
-            num = int(expr[l_posi:r_posi], 16)
+            num = int(expr[l_posi:r_posi].strip('L'), 16)
 
             if symbol_type[i] == 1:
                 result = result+num
@@ -421,6 +423,8 @@ class parse():
                 return struct.unpack('<Q',content)[0]
             elif length==4:
                 return struct.unpack('<I',content)[0]
+            elif length==2:
+                return struct.unpack('<H',content)[0]
         else:
             if proc.is_64():
                 return struct.unpack('<Q',content)[0]
@@ -435,6 +439,8 @@ class parse():
                 return struct.pack('<Q',content)
             elif length==4:
                 return struct.pack('<I',content)
+            elif length==2:
+                return struct.pack('<H',content)
         else:
             if proc.is_64():
                 return struct.pack('<Q',content)
