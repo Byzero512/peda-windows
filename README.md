@@ -6,7 +6,7 @@
 https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20%28Win64%20hosted%29/gdb/
 
 ## install
-1. git clone https://github.com/Byzero512/wibe
+1. git clone https://github.com/Byzero512/peda-windows.git
 2. add the absolute path of init.py into ~/.gdbinit
 
 ## command
