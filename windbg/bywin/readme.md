@@ -12,4 +12,4 @@ run command in windbg
 ```
 
 ### photos
-![](./bywin/pic/bywin.png)
+![](./pic/bywin.png)
