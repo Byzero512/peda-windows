@@ -1,5 +1,3 @@
-## wibe: peda-like gdb-script that support mingw-gdb on windows
-
 ### deps
 1. mingw gdb
 + please install the mingw-gdb ref by the link bellow, because wibe just support python2 yet<br>
