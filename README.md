@@ -19,4 +19,4 @@ https://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20
 
 
 ## photos
-![enter description here](./img/screen.png)
+![](./img/screen.png)
