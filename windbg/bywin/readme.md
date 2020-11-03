@@ -7,7 +7,7 @@
 ### install
 run command in windbg
 ```bat
-.load pykd;
+.load pykd_ext.dll;
 !py -g byinit.py
 ```
 
