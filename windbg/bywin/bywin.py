@@ -215,11 +215,20 @@ class context():
     @classmethod
     def show(clx):
         print('--------------------------------------------------------------------')
-        context.asm()
+        try:
+            context.asm()
+        except:
+            pass
         print('--------------------------------------------------------------------')
-        context.regs()
+        try:
+            context.regs()
+        except:
+            pass
         print('--------------------------------------------------------------------')
-        context.stack()  
+        try:
+            context.stack()
+        except:
+            pass
 
 # .load E:\ShareDir\building\bywin\pykd_ext_2.0.0.24\x64\pykd.dll
 # !py -g E:\ShareDir\building\bywin\bywin.py
